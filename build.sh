@@ -6,11 +6,16 @@ echo "=========================================="
 echo " MnVisionAI: Production Build for Render  "
 echo "=========================================="
 
-echo ">>> [1/3] Building React Frontend..."
-cd frontend
-npm install
-npm run build
-cd ..
+echo ">>> [1/3] Preparing React Frontend SPA..."
+if [ -d "frontend/dist" ] && [ -f "frontend/dist/index.html" ]; then
+  echo ">>> Pre-compiled production React bundle detected in frontend/dist. Skipping NPM build."
+else
+  echo ">>> Building React frontend from source..."
+  cd frontend
+  npm install --include=optional
+  npm run build
+  cd ..
+fi
 
 echo ">>> [2/3] Installing Python Backend Dependencies..."
 pip install --upgrade pip
