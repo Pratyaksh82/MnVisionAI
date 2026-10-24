@@ -11,6 +11,13 @@ _backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
+# Resolve frontend dist directory for single-service deployment
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_frontend_dist = os.path.abspath(os.path.join(_base_dir, "..", "..", "frontend", "dist"))
+if not os.path.exists(_frontend_dist):
+    _frontend_dist = os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist"))
+
+
 from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -48,8 +55,11 @@ class RoiAnalysisRequest(BaseModel):
     name: Optional[str] = "Custom Exploration Lease ROI"
     polygon_coords: Optional[List[List[float]]] = None
 
-@app.get("/")
-def read_root():
+@app.api_route("/", methods=["GET", "HEAD"])
+async def serve_root():
+    index_path = os.path.join(_frontend_dist, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "platform": "MnVisionAI",
         "description": "Space-Intelligence Platform for Manganese Reserve Discovery & Production Shortfall Mitigation",
@@ -58,8 +68,18 @@ def read_root():
         "status": "Operational"
     }
 
-@app.get("/api/health")
-def health_check():
+@app.api_route("/api", methods=["GET", "HEAD"])
+async def read_api_info():
+    return {
+        "platform": "MnVisionAI",
+        "description": "Space-Intelligence Platform for Manganese Reserve Discovery & Production Shortfall Mitigation",
+        "sih_ps": "SIH26009",
+        "organization": "MOIL Limited & Ministry of Steel",
+        "status": "Operational"
+    }
+
+@app.api_route("/api/health", methods=["GET", "HEAD"])
+async def health_check():
     return {"status": "ok", "service": "MnVisionAI Backend Engine"}
 
 @app.get("/api/study-area")
@@ -267,17 +287,14 @@ def download_target_dossier(target_id: str):
     )
 
 # Static files mount for Render fullstack single-service deployment
-_base_dir = os.path.dirname(os.path.abspath(__file__))
-_frontend_dist = os.path.abspath(os.path.join(_base_dir, "..", "..", "frontend", "dist"))
-if not os.path.exists(_frontend_dist):
-    _frontend_dist = os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist"))
-
 if os.path.exists(_frontend_dist):
-    app.mount("/assets", StaticFiles(directory=os.path.join(_frontend_dist, "assets")), name="assets")
+    assets_dir = os.path.join(_frontend_dist, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    @app.get("/{full_path:path}")
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"])
     async def serve_spa(full_path: str):
-        # Don't intercept API routes
+        # Don't intercept API routes or documentation
         if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
             raise HTTPException(status_code=404, detail="API Endpoint Not Found")
         file_path = os.path.join(_frontend_dist, full_path)

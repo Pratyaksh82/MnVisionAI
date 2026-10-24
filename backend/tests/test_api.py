@@ -10,6 +10,23 @@ from app.main import app
 def client():
     return TestClient(app)
 
+def test_root_serves_html(client):
+    res = client.get("/")
+    assert res.status_code == 200
+    # In fullstack mode, root returns the compiled React HTML or fallback JSON
+    assert "html" in res.headers.get("content-type", "") or res.json().get("platform") == "MnVisionAI"
+
+def test_root_head_request(client):
+    res = client.head("/")
+    assert res.status_code == 200
+
+def test_api_info_route(client):
+    res = client.get("/api")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["platform"] == "MnVisionAI"
+    assert "MOIL" in data["organization"]
+
 def test_api_health(client):
     res = client.get("/api/health")
     assert res.status_code == 200
