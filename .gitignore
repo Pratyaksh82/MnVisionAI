@@ -9,7 +9,9 @@ __pycache__/
 htmlcov/
 
 # Node / Frontend
+node_modules/
 frontend/node_modules/
+package-lock.json
 *.log
 
 # IDE & OS
